@@ -1,0 +1,1457 @@
+<title>現場指摘ノート</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Kaku+Gothic+New:wght@700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: 片手操作のモバイル優先。上に固定ヘッダー＋タブ、下に記録ボタン。カードは指摘票（No.・重要度・工種）を模した一覧 */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --surface-2:#f6f8fa; --ink:#18212c; --muted:#596577; --line:#d6dce4;
+  --accent:#1b5bc9; --accent-ink:#ffffff; --accent-soft:#e3ecfb;
+  --sev-a:#cf2b2b; --sev-a-soft:#fbe6e6; --sev-b:#b86e00; --sev-b-soft:#fbefdc; --sev-c:#5f6b7c; --sev-c-soft:#e9edf2;
+  --mark:#e5262b; --shadow:0 1px 2px rgba(20,30,45,.08),0 4px 14px rgba(20,30,45,.06);
+  --f-display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"BIZ UDPGothic","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1319; --surface:#17202a; --surface-2:#1d2732; --ink:#e6ebf1; --muted:#9aa6b5; --line:#2b3644;
+  --accent:#6f9fff; --accent-ink:#0b1424; --accent-soft:#1c2c47;
+  --sev-a:#ff7272; --sev-a-soft:#3a1d20; --sev-b:#f2a940; --sev-b-soft:#3a2b14; --sev-c:#a3afbe; --sev-c-soft:#25303c;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1319; --surface:#17202a; --surface-2:#1d2732; --ink:#e6ebf1; --muted:#9aa6b5; --line:#2b3644;
+  --accent:#6f9fff; --accent-ink:#0b1424; --accent-soft:#1c2c47;
+  --sev-a:#ff7272; --sev-a-soft:#3a1d20; --sev-b:#f2a940; --sev-b-soft:#3a2b14; --sev-c:#a3afbe; --sev-c-soft:#25303c;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.3}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px 0;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}
+.brand h1{font-size:19px;letter-spacing:.02em}
+.brand small{color:var(--muted);font-size:12px}
+.sync-chip{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.sync-chip.ok{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
+.sync-chip.warn{color:var(--sev-b);border-color:color-mix(in srgb,var(--sev-b) 40%,var(--line))}
+.sync-chip.err{color:var(--sev-a);border-color:color-mix(in srgb,var(--sev-a) 40%,var(--line))}
+.tabs{display:flex;gap:4px;width:100%;overflow-x:auto}
+.tab{flex:1;min-width:max-content;border:0;background:none;padding:10px 12px 11px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;font-size:14px}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.subbar{display:flex;align-items:center;gap:8px;padding-block:10px;width:100%}
+.subbar h2{font-size:17px;flex:1}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:14px;font-weight:700}
+
+main{padding-block:16px 120px}
+.view{display:flex;flex-direction:column;gap:16px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;font-size:14px;min-height:44px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--sev-a);border-color:color-mix(in srgb,var(--sev-a) 40%,var(--line))}
+.btn.danger.armed{background:var(--sev-a);color:var(--surface);border-color:var(--sev-a)}
+.btn.ghost{background:transparent}
+.btn.small{min-height:34px;padding:5px 10px;font-size:13px;border-radius:8px}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.fab{position:fixed;z-index:25;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(env(safe-area-inset-bottom,0px) + 18px);background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:14px 22px 14px 18px;font-weight:700;font-size:16px;box-shadow:0 6px 20px rgba(20,50,110,.35);display:flex;align-items:center;gap:8px}
+.fab svg{width:22px;height:22px}
+
+/* filters */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0 12px}
+.search input[type=text]{border:0;background:transparent;flex:1;min-width:0;padding:11px 0;outline:none;min-height:0}
+.search svg{width:18px;height:18px;color:var(--muted);flex:none}
+.filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.filters{grid-template-columns:1fr 1fr}.filters select:last-child{grid-column:1/-1}}
+select,input[type=text],input[type=date],textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:42px}
+textarea{min-height:110px;resize:vertical;line-height:1.6}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.chip.sevA[aria-pressed="true"]{background:var(--sev-a);border-color:var(--sev-a);color:var(--surface)}
+.chip.sevB[aria-pressed="true"]{background:var(--sev-b);border-color:var(--sev-b);color:var(--surface)}
+.chip.sevC[aria-pressed="true"]{background:var(--sev-c);border-color:var(--sev-c);color:var(--surface)}
+
+.summary{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.summary b{color:var(--ink);font-size:20px;font-family:var(--f-mono)}
+.summary .s{display:inline-flex;align-items:center;gap:5px}
+.dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+.banner.warn{background:var(--sev-a-soft);color:var(--ink)}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:13px}
+
+/* issue cards */
+.list{display:flex;flex-direction:column;gap:10px}
+.card{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--sev-c);border-radius:10px;padding:10px;text-align:left;width:100%}
+.card.A{border-left-color:var(--sev-a)} .card.B{border-left-color:var(--sev-b)}
+.thumb{width:92px;height:92px;border-radius:6px;object-fit:cover;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
+.card .meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.card .l1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.no{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:4px;padding:1px 7px}
+.pill.A{background:var(--sev-a-soft);color:var(--sev-a)} .pill.B{background:var(--sev-b-soft);color:var(--sev-b)} .pill.C{background:var(--sev-c-soft);color:var(--sev-c)}
+.card .trade{font-weight:700;font-size:14px}
+.card .loc{font-size:13px;color:var(--muted)}
+.card .cm{font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .foot{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.tag{font-size:12px;color:var(--accent)}
+
+.empty{text-align:center;color:var(--muted);padding:40px 16px;border:1.5px dashed var(--line);border-radius:12px}
+.empty h3{color:var(--ink);font-size:16px;margin-bottom:6px}
+
+/* form */
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.lab{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.03em}
+.req{color:var(--sev-a);font-weight:700;margin-left:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.grid2:not(.keep){grid-template-columns:1fr}}
+.tg{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.tg-h,.ti{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;align-items:center}
+.tg-h input{font-weight:700}
+.tg ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ti.off input{color:var(--muted);text-decoration:line-through}
+.ti .use{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:-4px}
+.mini{display:flex;gap:4px}
+.mini button{border:1px solid var(--line);background:var(--surface);border-radius:6px;font-size:12px;font-weight:700;padding:5px 7px;min-width:34px}
+.mini button:disabled{opacity:.35;cursor:default}
+.mini button.armed{background:var(--sev-a);color:var(--surface);border-color:var(--sev-a)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg button{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:58px}
+.seg button b{font-family:var(--f-mono);font-size:17px}
+.seg button span{font-size:12px;color:var(--muted)}
+.seg button[aria-pressed="true"].A{border-color:var(--sev-a);background:var(--sev-a-soft);color:var(--sev-a)}
+.seg button[aria-pressed="true"].B{border-color:var(--sev-b);background:var(--sev-b-soft);color:var(--sev-b)}
+.seg button[aria-pressed="true"].C{border-color:var(--sev-c);background:var(--sev-c-soft);color:var(--sev-c)}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.ph{position:relative;aspect-ratio:1;max-width:100%;border-radius:8px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .acts{position:absolute;inset:auto 0 0 0;display:flex;justify-content:space-between;padding:4px;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+.ph .acts button{border:0;background:rgba(255,255,255,.92);color:#18212c;border-radius:6px;font-size:12px;font-weight:700;padding:3px 8px}
+.addph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;aspect-ratio:1;border:1.5px dashed var(--accent);border-radius:8px;color:var(--accent);font-weight:700;font-size:13px;background:var(--accent-soft);cursor:pointer;text-align:center}
+.addph svg{width:26px;height:26px}
+.addph input{display:none}
+.hint{font-size:12px;color:var(--muted)}
+.sticky-actions{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);display:flex;gap:8px;background:var(--bg);padding-block:8px}
+.sticky-actions .btn{flex:1}
+
+/* detail */
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sheet .head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.sheet .head h3{font-size:17px;flex:1;min-width:0}
+.gallery{display:flex;gap:8px;overflow-x:auto;padding:12px 14px;scroll-snap-type:x mandatory}
+.gallery img{height:240px;max-width:88%;object-fit:contain;border-radius:8px;background:var(--surface-2);scroll-snap-align:start;cursor:zoom-in}
+dl.kv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 16px;margin:0;padding:12px 14px;border-top:1px solid var(--line)}
+dl.kv dt{color:var(--muted);font-size:13px;font-weight:700}
+dl.kv dd{margin:0;overflow-wrap:anywhere}
+.comment{padding:12px 14px;border-top:1px solid var(--line);white-space:pre-wrap;font-size:15px}
+.similar{display:flex;flex-direction:column;gap:8px}
+.similar h3{font-size:15px}
+
+/* knowledge */
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sec-h h2{font-size:17px}
+.sec-h p{margin:0;font-size:13px;color:var(--muted);width:100%}
+.pattern{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:12px 0;border-top:1px solid var(--line)}
+.pattern:first-child{border-top:0;padding-top:0}
+.pattern .pt{font-weight:700}
+.pattern .pt span{color:var(--muted);font-weight:400}
+.pattern .cnt{font-family:var(--f-mono);font-size:18px;font-weight:500;text-align:right}
+.pattern .cnt small{font-size:11px;color:var(--muted);font-family:var(--f-body)}
+.bar{grid-column:1/-1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.pattern .ex{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.pattern .row{grid-column:1/-1}
+.cl-group{display:flex;flex-direction:column}
+.cl-group h3{font-size:14px;padding:10px 0 6px;color:var(--muted);letter-spacing:.04em;border-bottom:1px solid var(--line)}
+.cl-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line)}
+.cl-item input{width:22px;height:22px;margin-top:1px;accent-color:var(--accent)}
+.cl-item label{cursor:pointer}
+.cl-item.done label{color:var(--muted);text-decoration:line-through}
+.cl-item .src{display:block;font-size:12px;color:var(--muted);text-decoration:none}
+.progress{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+
+/* export */
+.exp h2{font-size:16px;margin-bottom:4px}
+.exp p{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.exp .row{margin-top:10px}
+.storage{font-family:var(--f-mono);font-size:13px}
+
+/* editor overlay */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(8,12,18,.92);display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) max(12px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 10px) max(12px,env(safe-area-inset-left,0px));gap:10px;color:#fff}
+.overlay .bar2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.overlay .bar2 .sp{flex:1}
+.overlay .tool{border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;border-radius:8px;padding:7px 12px;font-weight:700;font-size:14px}
+.overlay .tool[aria-pressed="true"]{background:#fff;color:#111}
+.overlay .tool.go{background:#2f74ff;border-color:#2f74ff}
+.stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.stage canvas{max-width:100%;max-height:100%;touch-action:none;border-radius:4px;background:#222}
+.stage img{max-width:100%;max-height:100%;object-fit:contain}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 86px);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>現場指摘ノート</h1><small>品質指摘の記録とナレッジ</small></div>
+    <button class="sync-chip" id="syncChip" data-go="export" hidden></button>
+    <nav class="tabs" role="tablist" aria-label="画面切替">
+      <button class="tab" role="tab" id="tab-list" data-go="list" aria-selected="true">指摘一覧</button>
+      <button class="tab" role="tab" id="tab-know" data-go="know" aria-selected="false">傾向・チェックリスト</button>
+      <button class="tab" role="tab" id="tab-export" data-go="export" aria-selected="false">出力・設定</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- 一覧 -->
+  <section class="view" id="v-list">
+    <div id="syncBanner" class="banner" hidden>
+      <span id="syncMsg"></span>
+      <button class="btn small primary" id="syncSignIn">サインイン</button>
+    </div>
+    <div id="storeBanner" class="banner warn" hidden>
+      <span id="storeMsg"></span>
+      <button class="btn small" data-go="export">バックアップへ</button>
+    </div>
+    <div id="sampleBanner" class="banner" hidden>
+      <span>サンプルの指摘を表示しています。使い方を確認したら削除してください。</span>
+      <button class="btn small" id="delSamples">サンプルを削除</button>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="text" id="q" placeholder="キーワード（例：シーリング 北面）" autocomplete="off">
+    </div>
+    <div class="filters">
+      <select id="fSite" aria-label="現場"></select>
+      <select id="fTrade" aria-label="工種"></select>
+      <select id="fCat" aria-label="分類"></select>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <div class="chips" id="fSev">
+        <button class="chip sevA" data-sev="A" aria-pressed="false">A 重大</button>
+        <button class="chip sevB" data-sev="B" aria-pressed="false">B 要是正</button>
+        <button class="chip sevC" data-sev="C" aria-pressed="false">C 軽微</button>
+      </div>
+      <button class="btn small ghost" id="clearF" hidden>絞り込みを解除</button>
+    </div>
+    <div class="summary" id="summary"></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <!-- 入力 -->
+  <section class="view" id="v-form" hidden>
+    <div class="subbar"><button class="iconbtn" data-back>← 戻る</button><h2 id="formTitle">指摘を記録</h2></div>
+    <div class="field">
+      <span class="lab">写真</span>
+      <div class="photos" id="formPhotos"></div>
+      <span class="hint">写真の「赤ペン」で指摘箇所に丸や線を書き込めます。</span>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="iSite">現場名<span class="req">*</span></label><input type="text" id="iSite" list="dlSite" placeholder="例：〇〇物流センター新築工事"></div>
+      <div class="field"><label for="iDate">指摘日</label><input type="date" id="iDate"></div>
+    </div>
+    <div class="grid2 keep">
+      <div class="field"><label for="iGroup">大分類<span class="req">*</span></label><select id="iGroup"></select></div>
+      <div class="field"><label for="iTrade">工種<span class="req">*</span></label><select id="iTrade"></select></div>
+    </div>
+    <div class="field"><label for="iLoc">部位・場所</label><input type="text" id="iLoc" list="dlLoc" placeholder="例：2F 事務室 X2-Y3通り 梁"></div>
+    <div class="field"><span class="lab">重要度</span>
+      <div class="seg" id="iSev">
+        <button type="button" class="A" data-sev="A" aria-pressed="false"><b>A</b><span>重大・是正必須</span></button>
+        <button type="button" class="B" data-sev="B" aria-pressed="true"><b>B</b><span>要是正</span></button>
+        <button type="button" class="C" data-sev="C" aria-pressed="false"><b>C</b><span>軽微</span></button>
+      </div>
+    </div>
+    <div class="field"><label for="iCat">分類</label><div class="chips" id="iCat" role="radiogroup"></div><span class="hint" id="iCatDesc"></span></div>
+    <div class="field"><label for="iComment">指摘内容・コメント<span class="req">*</span></label>
+      <textarea id="iComment" placeholder="何が・どこで・どの程度か、是正方法を書いておくと後で活かせます。&#10;例：サイディング目地のシーリング打ち残し（L≈300mm）。打ち増しを依頼。"></textarea></div>
+    <div class="field"><label for="iTags">タグ（スペース区切り）</label><input type="text" id="iTags" placeholder="例：雨仕舞 是正依頼済 〇〇工務"></div>
+    <div class="sticky-actions"><button class="btn" data-back>キャンセル</button><button class="btn primary" id="save">保存する</button></div>
+  </section>
+
+  <!-- 詳細 -->
+  <section class="view" id="v-detail" hidden>
+    <div class="subbar"><button class="iconbtn" data-back>← 一覧</button><h2>指摘の詳細</h2></div>
+    <div id="detail"></div>
+  </section>
+
+  <!-- 傾向・チェックリスト -->
+  <section class="view" id="v-know" hidden>
+    <div class="panel">
+      <div class="sec-h"><h2>よくある指摘</h2><span class="hint" id="patTotal"></span>
+        <p>工種と分類の組み合わせで多い順に並べています。繰り返し起きている指摘は、チェック項目にして次の現場で事前に確認しましょう。</p></div>
+      <div id="patterns" style="margin-top:12px"></div>
+    </div>
+    <div class="panel" id="clPanel">
+      <div class="sec-h"><h2>工種別チェックリスト</h2><span class="progress" id="clProg"></span>
+        <p>施工前・検査前の確認に使います。チェック状態はこの端末に残ります。</p></div>
+      <div class="field" style="margin-top:12px">
+        <div class="grid2">
+          <select id="clTrade" aria-label="追加する項目の工種"></select>
+          <select id="clView" aria-label="表示する工種"></select>
+        </div>
+        <textarea id="clText" style="min-height:64px" placeholder="チェック項目を入力（例：サイディング目地のシーリング打ち残しがないか、全周目視する）"></textarea>
+        <div class="row"><button class="btn primary small" id="clAdd">項目を追加</button><button class="btn small ghost" id="clReset">チェックを全て外す</button></div>
+      </div>
+      <div id="checklist" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+  <!-- 出力 -->
+  <section class="view" id="v-export" hidden>
+    <div class="panel exp" id="spPanel">
+      <h2>保存先</h2>
+      <p>「この端末だけ」は各スマホのブラウザ内に保存します。「共有フォルダ」にすると SharePoint / Teams のフォルダに保存し、メンバー全員の指摘を見られます。電波がないときは端末に保存し、つながったときに送信します。</p>
+      <div class="chips" id="modeSel">
+        <button class="chip" data-mode="local" aria-pressed="true">この端末だけ</button>
+        <button class="chip" data-mode="sharepoint" aria-pressed="false">共有フォルダ（SharePoint）</button>
+      </div>
+      <p class="hint" id="spNA" hidden style="margin-top:10px">共有フォルダはこの画面（claude.ai 上の試作版）では使えません。社内向けに公開した版で使えます。</p>
+      <div id="spForm" hidden style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
+        <div class="field"><label for="cfClient">アプリケーション（クライアント）ID</label><input type="text" id="cfClient" autocomplete="off" placeholder="例：1a2b3c4d-…"></div>
+        <div class="field"><label for="cfTenant">ディレクトリ（テナント）ID</label><input type="text" id="cfTenant" autocomplete="off" placeholder="例：9z8y7x6w-…"></div>
+        <div class="field"><label for="cfFolder">共有フォルダのリンク</label><input type="text" id="cfFolder" autocomplete="off" placeholder="https://〇〇.sharepoint.com/:f:/s/…">
+          <span class="hint">SharePoint または Teams の「ファイル」で、保存用フォルダの「…」→「リンクをコピー」で取得したリンクを貼り付けます。</span></div>
+        <div class="row"><button class="btn primary" id="spConnect">接続する</button></div>
+        <div class="storage" id="spStatus"></div>
+        <div class="row" id="spActions">
+          <button class="btn small" id="spSync">今すぐ同期</button>
+          <button class="btn small" id="spUpload">この端末の記録を共有フォルダへ送る</button>
+          <button class="btn small" id="spLink">メンバー用リンクを作る</button>
+          <button class="btn small ghost" id="spOut">サインアウト</button>
+        </div>
+        <div class="field" id="spLinkBox" hidden>
+          <span class="hint">このリンクをメンバーに送ってください。開くと共有フォルダの設定が入り、会社のアカウントでサインインするだけで使えます。</span>
+          <textarea id="spLinkText" readonly style="min-height:72px;font-size:12px"></textarea>
+          <div class="row"><button class="btn small" id="spCopy">リンクをコピー</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel exp">
+      <h2>指摘報告書</h2>
+      <p>写真付きの報告書（HTML）を保存します。保存したファイルをブラウザで開き、印刷メニューから PDF にできます。一覧表は CSV で Excel に取り込めます。</p>
+      <div class="grid2"><select id="eSite" aria-label="報告書の現場"></select><select id="eTrade" aria-label="報告書の工種"></select></div>
+      <div class="chips" id="eSev" style="margin-top:8px">
+        <button class="chip sevA" data-sev="A" aria-pressed="true">A 重大</button>
+        <button class="chip sevB" data-sev="B" aria-pressed="true">B 要是正</button>
+        <button class="chip sevC" data-sev="C" aria-pressed="true">C 軽微</button>
+      </div>
+      <div class="row"><span class="hint" id="eCount"></span></div>
+      <div class="row"><button class="btn primary" id="eReport">写真付き報告書を保存</button><button class="btn" id="eCsv">一覧表（CSV）を保存</button></div>
+    </div>
+    <div class="panel exp">
+      <h2>チェックリスト</h2>
+      <p>工種別チェックリストを印刷用の HTML で保存します。現場に持ち込む紙のチェックシートに使えます。</p>
+      <div class="row"><select id="eClTrade" aria-label="チェックリストの工種" style="max-width:280px"></select><button class="btn" id="eCl">チェックリストを保存</button></div>
+    </div>
+    <div class="panel exp" id="tradePanel">
+      <h2>工種リスト</h2>
+      <p>入力画面の「大分類→工種」の選択肢です。名前を変えると、記録済みの指摘とチェック項目も新しい名前に置き換わります。使用中の工種は削除できないので、使わなくなったものは「隠す」にしてください。バックアップを書き出すと工種リストも含まれるので、他の端末に配れます。</p>
+      <div id="tradeEditor"></div>
+      <div class="row"><input type="text" id="newGroup" placeholder="大分類を追加（例：解体）" style="flex:1;min-width:0"><button class="btn small" id="addGroup">大分類を追加</button></div>
+      <div class="row"><button class="btn small ghost danger" id="resetTrades">工種リストを初期値に戻す</button></div>
+    </div>
+    <div class="panel exp">
+      <h2>データのバックアップと共有</h2>
+      <p>記録はこの端末のブラウザ内だけに保存されます。ブラウザのデータ削除で消えるため、定期的にバックアップを書き出してください。書き出したファイルを別の端末で読み込むと、指摘を共有できます（同じ指摘は上書きされます）。</p>
+      <div class="storage" id="storage"></div>
+      <div class="row">
+        <button class="btn primary" id="eBackup">バックアップを書き出す</button>
+        <label class="btn" for="eImport">バックアップを読み込む</label>
+        <input type="file" id="eImport" accept=".json,application/json" hidden>
+      </div>
+    </div>
+  </section>
+</main>
+
+<button class="fab" id="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>指摘を記録</button>
+
+<datalist id="dlSite"></datalist>
+<datalist id="dlLoc"></datalist>
+
+<div class="overlay" id="editor" hidden>
+  <div class="bar2">
+    <button class="tool" data-tool="circle" aria-pressed="true">◯ 丸</button>
+    <button class="tool" data-tool="pen" aria-pressed="false">✎ 赤ペン</button>
+    <button class="tool" id="edUndo">元に戻す</button>
+    <span class="sp"></span>
+    <button class="tool" id="edCancel">キャンセル</button>
+    <button class="tool go" id="edDone">完了</button>
+  </div>
+  <div class="stage"><canvas id="edCanvas"></canvas></div>
+</div>
+<div class="overlay" id="viewer" hidden>
+  <div class="bar2"><span class="sp"></span><button class="tool" id="vwClose">閉じる</button></div>
+  <div class="stage"><img id="vwImg" alt="指摘写真"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="msal-browser.min.js"></script>
+<script>
+(() => {
+'use strict';
+/* 工種の初期値：公共建築工事標準仕様書の章立てを、非住宅（S造・RC造）の品質指摘向けにまとめたもの */
+const DEFAULT_TRADES = [
+  {name: '躯体', items: ['仮設・土工','杭・基礎','鉄筋・型枠','コンクリート','鉄骨']},
+  {name: '外壁', items: ['ALC','サンドイッチパネル','角波','サイディング']},
+  {name: '屋根・防水', items: ['屋根・とい','防水','シーリング']},
+  {name: '内装・建具', items: ['建具・ガラス','床','壁・天井','塗装','断熱・耐火被覆']},
+  {name: '設備', items: ['電気設備','給排水衛生設備','空調換気設備','昇降機']},
+  {name: '外構・その他', items: ['外構・舗装','その他']},
+];
+/* 工種リストの版。上げると既存端末の工種リストを初期値に入れ替え、TRADE_RENAME で記録の工種名を移し替える */
+const TRADES_VER = 3;
+const TRADE_RENAME = {'仮設': '仮設・土工', '土工・地業': '仮設・土工', '鉄筋': '鉄筋・型枠', '型枠': '鉄筋・型枠', '内装': '壁・天井'};
+const LEGACY = '以前の工種';
+let trades = [];
+const defaultTrades = () => DEFAULT_TRADES.map(g => ({id: uid(), name: g.name, items: g.items.map(n => ({id: uid(), name: n, hidden: false}))}));
+const masterNames = () => trades.flatMap(g => g.items.map(i => i.name));
+/* 工種リストにないが記録に残っている工種（名前を消した・古いバックアップ等） */
+const legacyTrades = () => { const m = masterNames(); return [...new Set([...issues.map(i => i.trade), ...checklist.map(c => c.trade)])].filter(t => t && !m.includes(t)); };
+const tradeOrder = () => masterNames().concat(legacyTrades());
+const groupOf = name => trades.find(g => g.items.some(i => i.name === name))?.name || LEGACY;
+const tradeGroups = (keep = '') => trades.map(g => ({name: g.name, items: g.items.filter(i => !i.hidden || i.name === keep).map(i => i.name)}))
+  .concat([{name: LEGACY, items: legacyTrades()}]).filter(g => g.items.length);
+const tradeMatch = (f, t) => !f || (f.startsWith('g:') ? groupOf(t) === f.slice(2) : t === f);
+/* 大分類ごとの optgroup。groups=true で「建築（すべて）」のような大分類単位の選択肢も付ける */
+function fillTradeSelect(sel, {allLabel = '', value = '', groups = false, only = null} = {}) {
+  const vals = [''];
+  let html = allLabel ? `<option value="">${esc(allLabel)}</option>` : '';
+  for (const g of tradeGroups(value)) {
+    const items = only ? g.items.filter(only) : g.items;
+    if (!items.length) continue;
+    html += `<optgroup label="${esc(g.name)}">`;
+    if (groups) { html += `<option value="g:${esc(g.name)}">${esc(g.name)}（すべて）</option>`; vals.push('g:' + g.name); }
+    html += items.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('') + '</optgroup>';
+    vals.push(...items);
+  }
+  sel.innerHTML = html;
+  sel.value = vals.includes(value) ? value : '';
+}
+async function saveTrades() {
+  await persist('meta', {key: 'trades', value: trades});
+  if (shared()) { tradesDirty = true; await persist('meta', {key: 'tradesSync', value: {dirty: true, etag: tradesEtag}}); kick(); }
+}
+const CATS = ['施工不良','寸法・仕様違い','未施工・欠落','キズ・汚損','その他'];
+const CAT_DESC = {
+  '施工不良': '納まり・固定・締付け・隙間・不陸・打ち残しなど、施工の出来が悪いもの',
+  '寸法・仕様違い': '図面・仕様書・承認図と寸法・位置・材料・品番が違うもの',
+  '未施工・欠落': '施工されていない、部材やビス・金物が付いていないもの',
+  'キズ・汚損': 'キズ・汚れ・破損、養生や清掃の不足によるもの',
+  'その他': '上のどれにも当てはまらないもの',
+};
+/* 旧分類（9項目）から新分類（5項目）への読み替え */
+const CAT_RENAME = {'寸法・位置違い': '寸法・仕様違い', '仕様・図面違い': '寸法・仕様違い', '部材欠落・未施工': '未施工・欠落', '固定・締結不良': '施工不良', '隙間・不陸': '施工不良', '清掃・養生不足': 'キズ・汚損'};
+const tradeLabel = t => { const g = groupOf(t); return g === LEGACY || t === 'その他' ? t : `${g}｜${t}`; };
+const SEV = {A:'重大',B:'要是正',C:'軽微'};
+const LOCS = ['基礎','1F 倉庫','1F 荷捌き場','1F 事務所','2F 事務室','2F 会議室','トイレ','階段','EVホール','機械室','屋上','屋根','外部 北面','外部 南面','外部 東面','外部 西面','外構'];
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const fmtNo = n => 'No.' + String(n).padStart(4, '0');
+
+/* ---------- 保存先（IndexedDB。使えない場合はメモリ） ---------- */
+const store = {
+  db: null, ok: false, mem: {issues: new Map(), checklist: new Map(), meta: new Map()},
+  async open() {
+    try {
+      this.db = await new Promise((res, rej) => {
+        const r = indexedDB.open('genba-shiteki', 1);
+        r.onupgradeneeded = () => {
+          const d = r.result;
+          if (!d.objectStoreNames.contains('issues')) d.createObjectStore('issues', {keyPath: 'id'});
+          if (!d.objectStoreNames.contains('checklist')) d.createObjectStore('checklist', {keyPath: 'id'});
+          if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', {keyPath: 'key'});
+        };
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+      this.ok = true;
+    } catch (e) { this.ok = false; }
+  },
+  tx(name, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(name, mode);
+      const req = fn(t.objectStore(name));
+      t.oncomplete = () => res(req && req.result);
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error);
+    });
+  },
+  async all(name) { return this.ok ? this.tx(name, 'readonly', s => s.getAll()) : [...this.mem[name].values()]; },
+  async get(name, key) { return this.ok ? this.tx(name, 'readonly', s => s.get(key)) : this.mem[name].get(key); },
+  async put(name, obj) { if (!this.ok) { this.mem[name].set(obj.id ?? obj.key, obj); return; } return this.tx(name, 'readwrite', s => s.put(obj)); },
+  async del(name, key) { if (!this.ok) { this.mem[name].delete(key); return; } return this.tx(name, 'readwrite', s => s.delete(key)); },
+};
+
+/* 端末に書き込めない環境（ブラウザの制限・容量不足）では、写真を縮めて再試行し、
+   それでも駄目なら画面を閉じるまでの一時保存に切り替える */
+async function persist(name, obj) {
+  if (store.ok) {
+    try { return await store.put(name, obj); }
+    catch (e) {
+      let err = e;
+      if (obj.photos?.length) {
+        try { obj.photos = await Promise.all(obj.photos.map(p => p.startsWith('sp:') ? p : shrink(p))); return await store.put(name, obj); }
+        catch (e2) { err = e2; }
+      }
+      toMemory(err);
+    }
+  }
+  return store.put(name, obj);
+}
+function toMemory(err) {
+  store.ok = false; store.failReason = err?.name || err?.message || '不明なエラー';
+  issues.forEach(i => store.mem.issues.set(i.id, i));
+  checklist.forEach(c => store.mem.checklist.set(c.id, c));
+  toast(`端末に保存できませんでした（${store.failReason}）。一時保存に切り替えました`);
+  renderStoreBanner();
+}
+function renderStoreBanner() {
+  $('#storeBanner').hidden = store.ok;
+  $('#storeMsg').textContent = `このブラウザでは端末に保存できません（${store.failReason || 'IndexedDB 使用不可'}）。記録はこの画面を閉じると消えます。閉じる前に「出力・設定」からバックアップを書き出してください。`;
+}
+async function shrink(src) {
+  const im = await loadImg(src);
+  const sc = Math.min(1, 960 / Math.max(im.naturalWidth, im.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.round(im.naturalWidth * sc); c.height = Math.round(im.naturalHeight * sc);
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.6);
+}
+
+let issues = [];
+let checklist = [];
+let lastSite = '';
+let checks = {};
+
+/* ---------- 保存先：この端末だけ／SharePoint 共有フォルダ ----------
+   共有フォルダの中身： issues/{id}.json（指摘・縮小画像つき）, photos/{名前}.jpg, checklist/{id}.json, settings/trades.json
+   端末の IndexedDB を手元の控えとして使い、未送信のものは _dirty、送信済みは _etag を持つ */
+const CFG_KEY = 'genba-shiteki-config';
+const SCOPES = ['Files.ReadWrite.All'];
+let cfg = {mode: 'local'};
+try { cfg = {...cfg, ...JSON.parse(localStorage.getItem(CFG_KEY) || '{}')}; } catch (e) {}
+const saveCfg = () => { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) {} };
+const shared = () => cfg.mode === 'sharepoint';
+const appUrl = () => location.origin + location.pathname.replace(/index\.html$/, '');
+let msalApp = null, account = null, outbox = [], tradesDirty = false, tradesEtag = '';
+const sync = {busy: false, last: null, error: '', timer: null};
+
+async function initAuth() {
+  msalApp = null; account = null;
+  if (!shared() || !cfg.clientId || !window.msal) return;
+  try {
+    msalApp = new msal.PublicClientApplication({
+      auth: {clientId: cfg.clientId, authority: `https://login.microsoftonline.com/${cfg.tenant || 'organizations'}`, redirectUri: appUrl()},
+      cache: {cacheLocation: 'localStorage'},
+    });
+    await msalApp.initialize();
+    const res = await msalApp.handleRedirectPromise();
+    account = res?.account || msalApp.getAllAccounts()[0] || null;
+  } catch (e) { sync.error = 'サインインできませんでした（' + (e.errorCode || e.message) + '）'; }
+}
+async function signIn() {
+  if (!msalApp) await initAuth();
+  if (!msalApp) { toast('アプリケーション ID を確認してください'); return; }
+  await msalApp.loginRedirect({scopes: SCOPES});
+}
+async function token() {
+  if (!msalApp || !account) throw Object.assign(new Error('サインインが必要です'), {signin: true});
+  try { return (await msalApp.acquireTokenSilent({scopes: SCOPES, account})).accessToken; }
+  catch (e) {
+    if (e instanceof msal.InteractionRequiredAuthError) await msalApp.acquireTokenRedirect({scopes: SCOPES, account});
+    throw e;
+  }
+}
+async function graph(path, {method = 'GET', body, type, ok404 = false} = {}) {
+  const headers = {Authorization: 'Bearer ' + await token()};
+  if (type) headers['Content-Type'] = type;
+  const r = await fetch(path.startsWith('https:') ? path : 'https://graph.microsoft.com/v1.0' + path, {method, body, headers});
+  if (r.status === 404 && ok404) return null;
+  if (!r.ok) { let m = ''; try { m = (await r.json()).error?.message || ''; } catch (e) {} throw new Error(`${r.status} ${m}`.trim()); }
+  return r;
+}
+const itemPath = path => `/drives/${cfg.driveId}/items/${cfg.folderId}:/${path}`;
+async function resolveFolder(url) {
+  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(url))).replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
+  const it = await (await graph(`/shares/u!${b64}/driveItem`)).json();
+  if (!it.folder) throw new Error('フォルダのリンクではありません');
+  return {driveId: it.parentReference.driveId, folderId: it.id, folderName: it.name};
+}
+const putFile = async (path, data, type) => (await graph(itemPath(path) + ':/content', {method: 'PUT', body: data, type})).json();
+async function listFolder(path) {
+  const out = []; let url = itemPath(path) + ':/children?$top=999';
+  while (url) {
+    const r = await graph(url, {ok404: true}); if (!r) break;
+    const j = await r.json(); out.push(...j.value.filter(x => x.file)); url = j['@odata.nextLink'] || '';
+  }
+  return out;
+}
+const fileJson = async f => (await graph(`/drives/${cfg.driveId}/items/${f.id}/content`)).json();
+/* 同時に n 件ずつ処理する */
+async function pool(items, n, fn) { const q = [...items]; await Promise.all(Array.from({length: n}, async () => { while (q.length) await fn(q.shift()); })); }
+const blobToData = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+const photoCache = new Map();
+/* 写真の実体。端末で撮ったものは dataURL、共有フォルダにあるものは 'sp:ファイル名' */
+async function fullSrc(p) {
+  if (!p || !p.startsWith('sp:')) return p;
+  if (photoCache.has(p)) return photoCache.get(p);
+  let d = (await store.get('meta', 'ph:' + p).catch(() => null))?.value;
+  if (!d) {
+    d = await blobToData(await (await graph(itemPath('photos/' + p.slice(3)) + ':/content')).blob());
+    store.put('meta', {key: 'ph:' + p, value: d}).catch(() => {});
+  }
+  photoCache.set(p, d); return d;
+}
+const strip = r => { const o = {...r}; delete o._dirty; delete o._etag; return o; };
+const pendingCount = () => issues.filter(i => i._dirty).length + checklist.filter(c => c._dirty).length + outbox.length + (tradesDirty ? 1 : 0);
+const saveOutbox = () => persist('meta', {key: 'outbox', value: outbox});
+async function saveIssue(rec) { if (shared() && !rec.sample) rec._dirty = true; await persist('issues', rec); kick(); }
+async function saveCheck(c) { if (shared() && !c.sample) c._dirty = true; await persist('checklist', c); kick(); }
+async function removeIssue(i) {
+  await store.del('issues', i.id); issues = issues.filter(x => x.id !== i.id);
+  if (shared() && i._etag) {
+    outbox.push({kind: 'issue', id: i.id}, ...(i.photos || []).filter(p => p.startsWith('sp:')).map(p => ({kind: 'photo', id: p.slice(3)})));
+    await saveOutbox(); kick();
+  }
+}
+async function removeCheck(c) {
+  await store.del('checklist', c.id); checklist = checklist.filter(x => x.id !== c.id);
+  if (shared() && c._etag) { outbox.push({kind: 'check', id: c.id}); await saveOutbox(); kick(); }
+}
+function kick(delay = 1500) {
+  if (!shared()) return;
+  clearTimeout(sync.timer); sync.timer = setTimeout(runSync, delay); renderSync();
+}
+async function pushIssue(i) {
+  for (let n = 0; n < (i.photos || []).length; n++) {
+    const p = i.photos[n]; if (!p || p.startsWith('sp:')) continue;
+    const name = `${i.id}_${uid()}.jpg`;
+    await putFile('photos/' + name, await (await fetch(p)).blob(), 'image/jpeg');
+    const ref = 'sp:' + name;
+    photoCache.set(ref, p); store.put('meta', {key: 'ph:' + ref, value: p}).catch(() => {});
+    i.photos[n] = ref;
+  }
+  const res = await putFile(`issues/${i.id}.json`, JSON.stringify(strip(i)), 'application/json');
+  i._etag = res.eTag; delete i._dirty;
+  /* 送信中に同じ指摘が編集された場合は、新しい方を次回送る */
+  if (issues.find(x => x.id === i.id) === i) await persist('issues', i);
+}
+async function pushCheck(c) {
+  const res = await putFile(`checklist/${c.id}.json`, JSON.stringify(strip(c)), 'application/json');
+  c._etag = res.eTag; delete c._dirty;
+  if (checklist.find(x => x.id === c.id) === c) await persist('checklist', c);
+}
+async function pullKind(folder, getList, setList, name) {
+  const remote = await listFolder(folder), seen = new Set();
+  await pool(remote, 6, async f => {
+    const id = f.name.replace(/\.json$/, ''); seen.add(id);
+    const loc = getList().find(x => x.id === id);
+    if (loc && (loc._dirty || loc._etag === f.eTag)) return;
+    const rec = await fileJson(f); rec._etag = f.eTag;
+    await persist(name, rec); setList(getList().filter(x => x.id !== id).concat(rec));
+  });
+  /* 共有フォルダから消えたもの（他のメンバーが削除）は端末からも消す */
+  for (const x of getList().filter(x => x._etag && !x._dirty && !seen.has(x.id))) { await store.del(name, x.id); setList(getList().filter(y => y !== x)); }
+}
+async function syncTrades() {
+  if (tradesDirty) {
+    const res = await putFile('settings/trades.json', JSON.stringify({trades, ver: TRADES_VER}), 'application/json');
+    tradesEtag = res.eTag; tradesDirty = false;
+  } else {
+    const r = await graph(itemPath('settings/trades.json'), {ok404: true});
+    if (!r) { const res = await putFile('settings/trades.json', JSON.stringify({trades, ver: TRADES_VER}), 'application/json'); tradesEtag = res.eTag; }
+    else { const f = await r.json(); if (f.eTag !== tradesEtag) { const d = await fileJson(f); if (d.trades?.length) trades = d.trades; tradesEtag = f.eTag; await persist('meta', {key: 'trades', value: trades}); } }
+  }
+  await persist('meta', {key: 'tradesSync', value: {dirty: tradesDirty, etag: tradesEtag}});
+}
+async function runSync() {
+  if (!shared() || sync.busy) return;
+  if (!account || !cfg.folderId) { renderSync(); return; }
+  if (!navigator.onLine) { sync.error = 'オフラインです。つながったら送信します'; renderSync(); return; }
+  sync.busy = true; sync.error = ''; renderSync();
+  try {
+    for (const o of [...outbox]) {
+      const path = o.kind === 'issue' ? `issues/${o.id}.json` : o.kind === 'check' ? `checklist/${o.id}.json` : `photos/${o.id}`;
+      await graph(itemPath(path), {method: 'DELETE', ok404: true});
+      outbox = outbox.filter(x => x !== o); await saveOutbox();
+    }
+    for (const i of issues.filter(i => i._dirty)) await pushIssue(i);
+    for (const c of checklist.filter(c => c._dirty)) await pushCheck(c);
+    await syncTrades();
+    await pullKind('issues', () => issues, v => issues = v, 'issues');
+    await pullKind('checklist', () => checklist, v => checklist = v, 'checklist');
+    sync.last = new Date();
+  } catch (e) {
+    sync.error = e.signin ? 'サインインが必要です' : '同期できませんでした（' + e.message + '）';
+  }
+  sync.busy = false; renderSync();
+  if (['list', 'know', 'export'].includes(current)) show(current, true);
+}
+function renderSync() {
+  const chip = $('#syncChip');
+  chip.hidden = !shared();
+  $('#syncBanner').hidden = !(shared() && (!account || !cfg.folderId));
+  if (!shared()) return;
+  const n = pendingCount();
+  let cls = 'ok', text = '同期済み';
+  if (!account) { cls = 'warn'; text = '未サインイン'; }
+  else if (!cfg.folderId) { cls = 'warn'; text = 'フォルダ未接続'; }
+  else if (sync.busy) { cls = ''; text = '同期中…'; }
+  else if (sync.error) { cls = navigator.onLine ? 'err' : 'warn'; text = navigator.onLine ? '同期エラー' : 'オフライン'; }
+  if (n && !sync.busy && account) { cls = cls === 'err' ? 'err' : 'warn'; text = `未送信 ${n}`; }
+  chip.className = 'sync-chip ' + cls; chip.textContent = '共有：' + text;
+  $('#syncMsg').textContent = !account
+    ? '共有フォルダの指摘を見るには、会社の Microsoft アカウントでサインインしてください。'
+    : '共有フォルダに接続できません。「出力・設定」の保存先を確認してください。' + (sync.error ? `（${sync.error}）` : '');
+  $('#syncSignIn').hidden = !!account;
+  const st = $('#spStatus'); if (!st) return;
+  st.textContent = [
+    account ? `サインイン中：${account.name || account.username}` : '未サインイン',
+    cfg.folderName ? `フォルダ：${cfg.folderName}` : '',
+    sync.last ? `最終同期：${sync.last.toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'})}` : '',
+    n ? `未送信：${n} 件` : '',
+    sync.error,
+  ].filter(Boolean).join('／');
+}
+async function finishConnect() {
+  if (!cfg.folderId) {
+    try { Object.assign(cfg, await resolveFolder(cfg.folderUrl)); saveCfg(); toast(`共有フォルダ「${cfg.folderName}」に接続しました`); }
+    catch (e) { sync.error = e.signin ? 'サインインが必要です' : 'フォルダに接続できません（' + e.message + '）。リンクと、フォルダへの編集権限を確認してください'; renderSync(); return; }
+  }
+  if (cfg.foldersReady !== cfg.folderId) {
+    try {
+      for (const name of ['issues', 'photos', 'checklist', 'settings']) {
+        const r = await fetch(`https://graph.microsoft.com/v1.0/drives/${cfg.driveId}/items/${cfg.folderId}/children`, {method: 'POST',
+          headers: {Authorization: 'Bearer ' + await token(), 'Content-Type': 'application/json'},
+          body: JSON.stringify({name, folder: {}, '@microsoft.graph.conflictBehavior': 'fail'})});
+        if (!r.ok && r.status !== 409) throw new Error(String(r.status));
+      }
+      cfg.foldersReady = cfg.folderId; saveCfg();
+    } catch (e) { sync.error = 'フォルダを準備できませんでした（' + e.message + '）。フォルダへの編集権限を確認してください'; renderSync(); return; }
+  }
+  runSync();
+}
+/* メンバー用リンク（#cfg=…）で開かれたら設定を取り込む */
+function readCfgLink() {
+  if (!location.hash.startsWith('#cfg=')) return;
+  try {
+    const d = JSON.parse(decodeURIComponent(location.hash.slice(5)));
+    cfg = {mode: 'sharepoint', clientId: d.clientId, tenant: d.tenant || '', folderUrl: d.folderUrl, driveId: d.driveId, folderId: d.folderId, folderName: d.folderName};
+    saveCfg(); modeView = 'sharepoint';
+    setTimeout(() => toast('共有フォルダの設定を読み込みました。サインインしてください'), 300);
+  } catch (e) { setTimeout(() => toast('メンバー用リンクを読み込めませんでした'), 300); }
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
+
+/* ---------- 共通UI ---------- */
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600);
+}
+function armDelete(btn, label, onConfirm) {
+  if (btn.classList.contains('armed')) { onConfirm(); return; }
+  const orig = btn.textContent;
+  btn.classList.add('armed'); btn.textContent = label;
+  setTimeout(() => { btn.classList.remove('armed'); btn.textContent = orig; }, 3500);
+}
+function fillSelect(sel, items, allLabel, value) {
+  sel.innerHTML = (allLabel ? `<option value="">${esc(allLabel)}</option>` : '') + items.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  sel.value = items.includes(value) ? value : '';
+}
+const sites = () => [...new Set(issues.map(i => i.site).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
+
+/* ---------- 画面遷移 ---------- */
+let current = 'list', prev = 'list';
+function show(view, refresh = false) {
+  if (view !== current) prev = current;
+  current = view;
+  ['list','form','detail','know','export'].forEach(v => $('#v-' + v).hidden = v !== view);
+  $$('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.go === view || (view === 'detail' && t.dataset.go === 'list'))));
+  $('#fab').hidden = view === 'form';
+  if (view === 'list') renderList();
+  if (view === 'know') renderKnow();
+  if (view === 'export') renderExport();
+  if (!refresh) window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => { const t = e.target.closest('[data-go]'); if (t) show(t.dataset.go); });
+document.addEventListener('click', e => {
+  if (!e.target.closest('[data-back]')) return;
+  if (current === 'form' && editingId) { const id = editingId; editingId = null; openDetail(id); }
+  else show(prev === 'know' || prev === 'export' ? prev : 'list');
+});
+$('#fab').addEventListener('click', () => openForm());
+
+/* ---------- 一覧 ---------- */
+const F = {q: '', site: '', trade: '', cat: '', sev: new Set()};
+function filtered() {
+  const words = F.q.toLowerCase().split(/\s+/).filter(Boolean);
+  return issues.filter(i => {
+    if (F.site && i.site !== F.site) return false;
+    if (!tradeMatch(F.trade, i.trade)) return false;
+    if (F.cat && i.category !== F.cat) return false;
+    if (F.sev.size && !F.sev.has(i.severity)) return false;
+    if (words.length) {
+      const hay = [i.site, i.location, groupOf(i.trade), i.trade, i.category, i.comment, (i.tags || []).join(' '), fmtNo(i.no), SEV[i.severity]].join(' ').toLowerCase();
+      if (!words.every(w => hay.includes(w))) return false;
+    }
+    return true;
+  }).sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.no - a.no);
+}
+const thumbOf = (i, n = 0) => i.thumbs?.[n] || (i.photos?.[n] && !i.photos[n].startsWith('sp:') ? i.photos[n] : '');
+function cardHTML(i) {
+  const t = thumbOf(i);
+  const th = t ? `<img class="thumb" src="${t}" alt="">` : `<div class="thumb">${i.photos?.length ? '写真' : '写真なし'}</div>`;
+  const tags = (i.tags || []).map(t => `<span class="tag">#${esc(t)}</span>`).join(' ');
+  return `<button class="card ${i.severity}" data-open="${i.id}">${th}
+    <div class="meta">
+      <div class="l1"><span class="pill ${i.severity}">${i.severity} ${SEV[i.severity]}</span><span class="trade">${esc(tradeLabel(i.trade))}</span><span class="no">${fmtNo(i.no)}</span></div>
+      <div class="loc">${esc(i.location || '部位未入力')}・${esc(i.category)}</div>
+      <div class="cm">${esc(i.comment)}</div>
+      <div class="foot"><span>${esc(i.site)}</span><span class="mono">${esc(i.date)}</span>${i.createdBy ? `<span>${esc(i.createdBy)}</span>` : ''}${i._dirty ? '<span style="color:var(--sev-b)">未送信</span>' : ''}${i.photos?.length > 1 ? `<span>写真${i.photos.length}枚</span>` : ''}${tags}</div>
+    </div></button>`;
+}
+function renderList() {
+  fillSelect($('#fSite'), sites(), 'すべての現場', F.site);
+  fillTradeSelect($('#fTrade'), {allLabel: 'すべての工種', value: F.trade, groups: true});
+  fillSelect($('#fCat'), CATS, 'すべての分類', F.cat);
+  $$('#fSev .chip').forEach(c => c.setAttribute('aria-pressed', String(F.sev.has(c.dataset.sev))));
+  const active = F.q || F.site || F.trade || F.cat || F.sev.size;
+  $('#clearF').hidden = !active;
+  renderStoreBanner(); renderSync();
+  $('#sampleBanner').hidden = !issues.some(i => i.sample);
+  const list = filtered();
+  const cnt = s => list.filter(i => i.severity === s).length;
+  $('#summary').innerHTML = `<span><b>${list.length}</b> 件${active ? `（全 ${issues.length} 件中）` : ''}</span>
+    <span class="s"><i class="dot" style="background:var(--sev-a)"></i>A ${cnt('A')}</span>
+    <span class="s"><i class="dot" style="background:var(--sev-b)"></i>B ${cnt('B')}</span>
+    <span class="s"><i class="dot" style="background:var(--sev-c)"></i>C ${cnt('C')}</span>`;
+  if (!issues.length) {
+    $('#list').innerHTML = `<div class="empty"><h3>まだ指摘がありません</h3>右下の「指摘を記録」から、写真を撮ってコメントを残しましょう。</div>`;
+  } else if (!list.length) {
+    $('#list').innerHTML = `<div class="empty"><h3>条件に合う指摘がありません</h3>キーワードや絞り込みを変えてみてください。</div>`;
+  } else {
+    $('#list').innerHTML = list.map(cardHTML).join('');
+  }
+}
+$('#q').addEventListener('input', e => { F.q = e.target.value; renderList(); });
+$('#fSite').addEventListener('change', e => { F.site = e.target.value; renderList(); });
+$('#fTrade').addEventListener('change', e => { F.trade = e.target.value; renderList(); });
+$('#fCat').addEventListener('change', e => { F.cat = e.target.value; renderList(); });
+$('#fSev').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; F.sev.has(c.dataset.sev) ? F.sev.delete(c.dataset.sev) : F.sev.add(c.dataset.sev); renderList(); });
+$('#clearF').addEventListener('click', () => { Object.assign(F, {q: '', site: '', trade: '', cat: ''}); F.sev.clear(); $('#q').value = ''; renderList(); });
+document.addEventListener('click', e => { const c = e.target.closest('[data-open]'); if (c) openDetail(c.dataset.open); });
+$('#delSamples').addEventListener('click', e => armDelete(e.currentTarget, 'もう一度押すと削除', async () => {
+  for (const i of issues.filter(i => i.sample)) await store.del('issues', i.id);
+  for (const c of checklist.filter(c => c.sample)) await store.del('checklist', c.id);
+  issues = issues.filter(i => !i.sample); checklist = checklist.filter(c => !c.sample);
+  toast('サンプルを削除しました'); renderList();
+}));
+
+/* ---------- 入力フォーム ---------- */
+let draft = null, editingId = null;
+function openForm(issue) {
+  editingId = issue ? issue.id : null;
+  draft = issue ? {...issue, photos: [...(issue.photos || [])]} : {severity: 'B', category: CATS[0], photos: [], site: lastSite, date: today(), trade: ''};
+  draft.thumbs = draft.photos.map((p, n) => thumbOf(issue || {}, n));
+  $('#formTitle').textContent = issue ? `${fmtNo(issue.no)} を編集` : '指摘を記録';
+  $('#iSite').value = draft.site || '';
+  $('#iDate').value = draft.date || today();
+  $('#iLoc').value = draft.location || '';
+  fillGroupTrade(draft.trade ? groupOf(draft.trade) : '', draft.trade);
+  $('#iComment').value = draft.comment || '';
+  $('#iTags').value = (draft.tags || []).join(' ');
+  $('#dlSite').innerHTML = sites().map(s => `<option value="${esc(s)}">`).join('');
+  const locs = [...new Set([...issues.map(i => i.location).filter(Boolean), ...LOCS])];
+  $('#dlLoc').innerHTML = locs.map(s => `<option value="${esc(s)}">`).join('');
+  renderSev(); renderCats(); renderFormPhotos();
+  show('form');
+}
+function renderSev() { $$('#iSev button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sev === draft.severity))); }
+function renderCats() {
+  $('#iCat').innerHTML = CATS.map(c => `<button type="button" class="chip" role="radio" data-cat="${esc(c)}" aria-pressed="${c === draft.category}" aria-checked="${c === draft.category}">${esc(c)}</button>`).join('');
+  $('#iCatDesc').textContent = CAT_DESC[draft.category] || '';
+}
+function fillGroupTrade(group, trade) {
+  const gs = tradeGroups(trade);
+  $('#iGroup').innerHTML = '<option value="">大分類を選択</option>' + gs.map(g => `<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
+  if (!gs.some(g => g.name === group)) group = '';
+  $('#iGroup').value = group;
+  fillSelect($('#iTrade'), gs.find(g => g.name === group)?.items || [], group ? '工種を選択' : '先に大分類を選択', trade);
+  $('#iTrade').disabled = !group;
+}
+$('#iGroup').addEventListener('change', e => fillGroupTrade(e.target.value, ''));
+$('#iSev').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { draft.severity = b.dataset.sev; renderSev(); } });
+$('#iCat').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) { draft.category = b.dataset.cat; renderCats(); } });
+function renderFormPhotos() {
+  const ph = draft.photos.map((src, i) => `<div class="ph"><img src="${draft.thumbs[i] || src}" alt="写真${i + 1}"><div class="acts"><button type="button" data-edit="${i}">赤ペン</button><button type="button" data-rm="${i}">削除</button></div></div>`).join('');
+  $('#formPhotos').innerHTML = ph +
+    `<label class="addph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>撮影する<input type="file" id="phCam" accept="image/*" capture="environment"></label>
+     <label class="addph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/></svg>写真を選ぶ<input type="file" id="phLib" accept="image/*" multiple></label>`;
+}
+$('#formPhotos').addEventListener('change', async e => {
+  if (!e.target.files?.length) return;
+  for (const f of e.target.files) {
+    try { const d = await compress(f); draft.thumbs.push(await makeThumb(d)); draft.photos.push(d); } catch (err) { toast('写真を読み込めませんでした'); }
+  }
+  renderFormPhotos();
+});
+$('#formPhotos').addEventListener('click', e => {
+  const rm = e.target.closest('[data-rm]'); if (rm) { draft.photos.splice(+rm.dataset.rm, 1); draft.thumbs.splice(+rm.dataset.rm, 1); renderFormPhotos(); return; }
+  const ed = e.target.closest('[data-edit]'); if (ed) openEditor(+ed.dataset.edit);
+});
+function loadImg(src) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
+async function makeThumb(src) {
+  const im = await loadImg(src);
+  const sc = Math.min(1, 320 / Math.max(im.naturalWidth, im.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.round(im.naturalWidth * sc); c.height = Math.round(im.naturalHeight * sc);
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.6);
+}
+async function compress(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const im = await loadImg(url);
+    const max = 1280, sc = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(im.naturalWidth * sc); c.height = Math.round(im.naturalHeight * sc);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.72);
+  } finally { URL.revokeObjectURL(url); }
+}
+$('#save').addEventListener('click', async () => {
+  draft.site = $('#iSite').value.trim();
+  draft.date = $('#iDate').value || today();
+  draft.location = $('#iLoc').value.trim();
+  draft.trade = $('#iTrade').value;
+  draft.comment = $('#iComment').value.trim();
+  draft.tags = $('#iTags').value.split(/[\s,、　]+/).map(s => s.replace(/^#/, '')).filter(Boolean);
+  const miss = [!draft.site && '現場名', !draft.trade && '工種', !draft.comment && '指摘内容'].filter(Boolean);
+  if (miss.length) { toast(miss.join('・') + 'を入力してください'); return; }
+  const now = new Date().toISOString();
+  const who = account ? (account.name || account.username) : '';
+  if (!editingId) { draft.id = uid(); draft.no = issues.reduce((m, i) => Math.max(m, i.no || 0), 0) + 1; draft.createdAt = now; draft.createdBy = who; }
+  draft.updatedAt = now; draft.updatedBy = who;
+  const rec = {...draft}; delete rec.sample;
+  const old = editingId && issues.find(i => i.id === editingId);
+  if (old?.sample) rec.sample = true;
+  /* 編集で外した写真は共有フォルダからも消す */
+  const dropped = (old?.photos || []).filter(p => p.startsWith('sp:') && !rec.photos.includes(p));
+  if (shared() && dropped.length) { outbox.push(...dropped.map(p => ({kind: 'photo', id: p.slice(3)}))); await saveOutbox(); }
+  await saveIssue(rec);
+  issues = issues.filter(i => i.id !== rec.id).concat(rec);
+  lastSite = rec.site; persist('meta', {key: 'lastSite', value: lastSite});
+  toast(editingId ? '変更を保存しました' : `${fmtNo(rec.no)} を記録しました`);
+  if (editingId) openDetail(rec.id); else show('list');
+  editingId = null;
+});
+
+/* ---------- 赤ペン編集 ---------- */
+const ed = {idx: -1, img: null, strokes: [], cur: null, tool: 'circle'};
+const cv = $('#edCanvas'), cx = cv.getContext('2d');
+async function openEditor(idx) {
+  ed.idx = idx; ed.strokes = []; ed.cur = null;
+  try { ed.img = await loadImg(await fullSrc(draft.photos[idx])); }
+  catch (e) { toast('写真を取得できませんでした。通信状態を確認してください'); return; }
+  cv.width = ed.img.naturalWidth; cv.height = ed.img.naturalHeight;
+  $('#editor').hidden = false; redraw();
+}
+function redraw() {
+  cx.drawImage(ed.img, 0, 0);
+  cx.strokeStyle = '#e5262b'; cx.lineCap = 'round'; cx.lineJoin = 'round';
+  cx.lineWidth = Math.max(4, cv.width / 140);
+  for (const s of [...ed.strokes, ed.cur].filter(Boolean)) {
+    cx.beginPath();
+    if (s.tool === 'pen') { s.pts.forEach((p, i) => i ? cx.lineTo(p.x, p.y) : cx.moveTo(p.x, p.y)); }
+    else if (s.pts[1]) {
+      const [a, b] = s.pts;
+      cx.ellipse((a.x + b.x) / 2, (a.y + b.y) / 2, Math.abs(b.x - a.x) / 2 + 1, Math.abs(b.y - a.y) / 2 + 1, 0, 0, Math.PI * 2);
+    }
+    cx.stroke();
+  }
+}
+const pt = e => { const r = cv.getBoundingClientRect(); return {x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height}; };
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ed.cur = {tool: ed.tool, pts: [pt(e)]}; });
+cv.addEventListener('pointermove', e => { if (!ed.cur) return; if (ed.cur.tool === 'pen') ed.cur.pts.push(pt(e)); else ed.cur.pts[1] = pt(e); redraw(); });
+const endStroke = () => { if (ed.cur && (ed.cur.tool === 'pen' ? ed.cur.pts.length > 1 : ed.cur.pts[1])) ed.strokes.push(ed.cur); ed.cur = null; redraw(); };
+cv.addEventListener('pointerup', endStroke); cv.addEventListener('pointercancel', endStroke);
+$$('#editor [data-tool]').forEach(b => b.addEventListener('click', () => { ed.tool = b.dataset.tool; $$('#editor [data-tool]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
+$('#edUndo').addEventListener('click', () => { ed.strokes.pop(); redraw(); });
+$('#edCancel').addEventListener('click', () => $('#editor').hidden = true);
+$('#edDone').addEventListener('click', async () => {
+  if (ed.strokes.length) { const d = cv.toDataURL('image/jpeg', 0.85); draft.photos[ed.idx] = d; draft.thumbs[ed.idx] = await makeThumb(d); }
+  $('#editor').hidden = true; renderFormPhotos();
+});
+
+/* ---------- 詳細 ---------- */
+function openDetail(id) {
+  const i = issues.find(x => x.id === id); if (!i) { show('list'); return; }
+  const similar = issues.filter(x => x.id !== i.id && x.trade === i.trade && x.category === i.category).sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 5);
+  $('#detail').innerHTML = `
+    <div class="sheet">
+      <div class="head"><span class="pill ${i.severity}">${i.severity} ${SEV[i.severity]}</span><h3>${esc(tradeLabel(i.trade))}・${esc(i.category)}</h3><span class="no">${fmtNo(i.no)}</span></div>
+      ${i.photos?.length ? `<div class="gallery">${i.photos.map((p, n) => `<img src="${thumbOf(i, n)}" alt="写真${n + 1}" data-zoom="${n}">`).join('')}</div>` : ''}
+      <div class="comment">${esc(i.comment)}</div>
+      <dl class="kv">
+        <dt>現場</dt><dd>${esc(i.site)}</dd>
+        <dt>部位・場所</dt><dd>${esc(i.location || '―')}</dd>
+        <dt>指摘日</dt><dd class="mono">${esc(i.date)}</dd>
+        ${i.createdBy ? `<dt>記録者</dt><dd>${esc(i.createdBy)}${i.updatedBy && i.updatedBy !== i.createdBy ? `（更新：${esc(i.updatedBy)}）` : ''}</dd>` : ''}
+        ${i.tags?.length ? `<dt>タグ</dt><dd>${i.tags.map(t => `<span class="tag">#${esc(t)}</span>`).join(' ')}</dd>` : ''}
+      </dl>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="dEdit">編集する</button>
+      <button class="btn" id="dCl">チェックリストに追加</button>
+      <button class="btn danger" id="dDel">削除</button>
+    </div>
+    <div class="similar">
+      <h3>同じ工種・分類の過去の指摘（${similar.length}件）</h3>
+      ${similar.length ? `<div class="list">${similar.map(cardHTML).join('')}</div>` : `<p class="hint">まだありません。</p>`}
+    </div>`;
+  $('#dEdit').onclick = () => openForm(i);
+  $('#dCl').onclick = async () => { await addCheck(i.trade, i.comment, [i.id]); toast(`「${i.trade}」のチェックリストに追加しました`); };
+  $('#dDel').onclick = e => armDelete(e.currentTarget, 'もう一度押すと削除', async () => {
+    await removeIssue(i); toast(`${fmtNo(i.no)} を削除しました`); show('list');
+  });
+  $$('#detail [data-zoom]').forEach(im => {
+    fullSrc(i.photos[+im.dataset.zoom]).then(src => { if (src) im.src = src; }).catch(() => {});
+    im.onclick = () => { $('#vwImg').src = im.src; $('#viewer').hidden = false; };
+  });
+  show('detail');
+}
+$('#vwClose').addEventListener('click', () => $('#viewer').hidden = true);
+
+/* ---------- 傾向・チェックリスト ---------- */
+async function addCheck(trade, text, sources = []) {
+  const item = {id: uid(), trade, text: text.trim(), sources, createdAt: new Date().toISOString(), createdBy: account ? (account.name || account.username) : ''};
+  checklist.push(item); await saveCheck(item);
+  return item;
+}
+function patterns() {
+  const g = new Map();
+  for (const i of issues) {
+    const k = i.trade + '\u0000' + i.category;
+    if (!g.has(k)) g.set(k, {trade: i.trade, category: i.category, items: []});
+    g.get(k).items.push(i);
+  }
+  return [...g.values()].sort((a, b) => b.items.length - a.items.length || b.items.filter(i => i.severity === 'A').length - a.items.filter(i => i.severity === 'A').length);
+}
+let clView = '';
+function renderKnow() {
+  const ps = patterns().slice(0, 8);
+  const max = ps[0]?.items.length || 1;
+  $('#patTotal').textContent = issues.length ? `指摘 ${issues.length} 件から集計` : '';
+  $('#patterns').innerHTML = ps.length ? ps.map((p, n) => {
+    const latest = [...p.items].sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+    const a = p.items.filter(i => i.severity === 'A').length;
+    const nSites = new Set(p.items.map(i => i.site)).size;
+    return `<div class="pattern">
+      <div class="pt"><span>${esc(groupOf(p.trade))}｜</span>${esc(p.trade)} <span>／</span> ${esc(p.category)}</div>
+      <div class="cnt">${p.items.length}<small> 件</small></div>
+      <div class="bar"><i style="width:${p.items.length / max * 100}%"></i></div>
+      <div class="ex">${nSites}現場${a ? `・<span style="color:var(--sev-a);font-weight:700">A ${a}件</span>` : ''}｜最新：${esc(latest.comment.slice(0, 60))}${latest.comment.length > 60 ? '…' : ''}</div>
+      <div class="row"><button class="btn small" data-pat-list="${n}">指摘を見る</button><button class="btn small" data-pat-add="${n}">チェック項目にする</button></div>
+    </div>`;
+  }).join('') : `<div class="empty"><h3>集計する指摘がありません</h3>指摘を記録すると、多い組み合わせがここに並びます。</div>`;
+  $('#patterns').onclick = e => {
+    const l = e.target.closest('[data-pat-list]'), a = e.target.closest('[data-pat-add]');
+    const p = ps[+(l || a)?.dataset[l ? 'patList' : 'patAdd']];
+    if (!p) return;
+    if (l) { Object.assign(F, {q: '', site: '', trade: p.trade, cat: p.category}); F.sev.clear(); $('#q').value = ''; show('list'); }
+    else {
+      $('#clTrade').value = p.trade;
+      $('#clText').value = `${p.category}がないか確認する（過去${p.items.length}件 例：${p.items[0].comment.slice(0, 40)}）`;
+      $('#clText').dataset.sources = p.items.map(i => i.id).join(',');
+      $('#clPanel').scrollIntoView({behavior: 'smooth', block: 'start'}); $('#clText').focus({preventScroll: true});
+    }
+  };
+  fillTradeSelect($('#clTrade'), {allLabel: '追加先の工種を選択', value: $('#clTrade').value});
+  fillTradeSelect($('#clView'), {allLabel: 'すべての工種を表示', value: clView, groups: true, only: t => checklist.some(c => c.trade === t)});
+  renderChecklist();
+}
+function renderChecklist() {
+  const items = checklist.filter(c => tradeMatch(clView, c.trade));
+  const done = items.filter(c => checks[c.id]).length;
+  $('#clProg').textContent = items.length ? `${done} / ${items.length} 確認済み` : '';
+  if (!items.length) { $('#checklist').innerHTML = `<div class="empty"><h3>チェック項目がありません</h3>上で入力するか、「よくある指摘」や指摘の詳細から追加できます。</div>`; return; }
+  $('#checklist').innerHTML = tradeOrder().filter(t => items.some(c => c.trade === t)).map(t => `
+    <div class="cl-group"><h3>${esc(groupOf(t))}｜${esc(t)}</h3>
+    ${items.filter(c => c.trade === t).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map(c => `
+      <div class="cl-item ${checks[c.id] ? 'done' : ''}">
+        <input type="checkbox" id="cl-${c.id}" data-chk="${c.id}" ${checks[c.id] ? 'checked' : ''}>
+        <label for="cl-${c.id}">${esc(c.text)}${c.sources?.length ? `<span class="src">過去の指摘 ${c.sources.length} 件から作成</span>` : ''}</label>
+        <button class="btn small ghost danger" data-cldel="${c.id}">削除</button>
+      </div>`).join('')}</div>`).join('');
+}
+$('#checklist').addEventListener('change', async e => {
+  const id = e.target.dataset.chk; if (!id) return;
+  if (e.target.checked) checks[id] = true; else delete checks[id];
+  await persist('meta', {key: 'checks', value: checks}); renderChecklist();
+});
+$('#checklist').addEventListener('click', e => {
+  const b = e.target.closest('[data-cldel]'); if (!b) return;
+  armDelete(b, '削除する', async () => { const c = checklist.find(x => x.id === b.dataset.cldel); if (c) await removeCheck(c); renderKnow(); });
+});
+$('#clView').addEventListener('change', e => { clView = e.target.value; renderChecklist(); });
+$('#clAdd').addEventListener('click', async () => {
+  const t = $('#clTrade').value, txt = $('#clText').value.trim();
+  if (!t || !txt) { toast('工種とチェック項目を入力してください'); return; }
+  const src = ($('#clText').dataset.sources || '').split(',').filter(Boolean);
+  await addCheck(t, txt, src);
+  $('#clText').value = ''; delete $('#clText').dataset.sources;
+  toast('チェック項目を追加しました'); renderKnow();
+});
+$('#clReset').addEventListener('click', async () => {
+  for (const c of checklist.filter(c => tradeMatch(clView, c.trade))) delete checks[c.id];
+  await persist('meta', {key: 'checks', value: checks}); renderChecklist();
+});
+
+/* ---------- 出力 ---------- */
+let dlNs;
+async function downloads() {
+  if (dlNs !== undefined) return dlNs;
+  try { dlNs = window.claude?.use ? await window.claude.use('downloads') : null; } catch (e) { dlNs = null; }
+  return dlNs;
+}
+async function saveFile(filename, data, mime) {
+  const dl = await downloads();
+  if (dl) {
+    try { await dl.save({filename, data}); toast('保存しました'); }
+    catch (e) { toast(e?.code === 'declined' ? '保存を取り消しました' : '保存できませんでした（' + (e?.message || e?.code || 'エラー') + '）'); }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], {type: mime}));
+  a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+const E = {sev: new Set(['A','B','C'])};
+function exportList() {
+  const s = $('#eSite').value, t = $('#eTrade').value;
+  return issues.filter(i => (!s || i.site === s) && tradeMatch(t, i.trade) && E.sev.has(i.severity)).sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.no - b.no);
+}
+function renderExport() {
+  fillSelect($('#eSite'), sites(), 'すべての現場', $('#eSite').value);
+  fillTradeSelect($('#eTrade'), {allLabel: 'すべての工種', value: $('#eTrade').value, groups: true});
+  fillTradeSelect($('#eClTrade'), {allLabel: 'すべての工種', value: $('#eClTrade').value, groups: true, only: t => checklist.some(c => c.trade === t)});
+  renderTradeEditor();
+  $$('#eSev .chip').forEach(c => c.setAttribute('aria-pressed', String(E.sev.has(c.dataset.sev))));
+  updateECount();
+  const photos = issues.reduce((n, i) => n + (i.photos?.length || 0), 0);
+  $('#storage').textContent = `保存件数：指摘 ${issues.length} 件／写真 ${photos} 枚／チェック項目 ${checklist.length} 件` + (store.ok ? '' : '（一時保存中：画面を閉じると消えます）');
+  renderSpPanel();
+  if (navigator.storage?.estimate) navigator.storage.estimate().then(est => {
+    if (est.usage != null) $('#storage').textContent += `／使用容量 約${(est.usage / 1048576).toFixed(1)}MB`;
+  }).catch(() => {});
+}
+function updateECount() { const n = exportList().length; $('#eCount').textContent = `対象 ${n} 件`; $('#eReport').disabled = $('#eCsv').disabled = !n; }
+$('#eSite').addEventListener('change', updateECount);
+$('#eTrade').addEventListener('change', updateECount);
+$('#eSev').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; E.sev.has(c.dataset.sev) ? E.sev.delete(c.dataset.sev) : E.sev.add(c.dataset.sev); renderExport(); });
+const stamp = () => today().replace(/-/g, '');
+const docStyle = `body{font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;color:#18212c;margin:24px;font-size:12.5px;line-height:1.55}
+h1{font-size:20px;margin:0 0 4px}.sub{color:#596577;margin:0 0 16px}table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #b9c1cc;padding:5px 7px;text-align:left;vertical-align:top}th{background:#eef1f4;white-space:nowrap;width:1%}
+.it{page-break-inside:avoid;break-inside:avoid;margin:0 0 18px;border-top:3px solid #5f6b7c;padding-top:8px}.it.A{border-top-color:#cf2b2b}.it.B{border-top-color:#b86e00}
+.hd{display:flex;gap:10px;align-items:baseline;margin-bottom:6px}.hd b{font-size:15px}.no{font-family:monospace;color:#596577}
+.sev{font-weight:700;padding:1px 6px;border-radius:3px;background:#e9edf2}.A .sev{background:#fbe6e6;color:#cf2b2b}.B .sev{background:#fbefdc;color:#b86e00}
+.ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-bottom:6px}.ph img{width:100%;max-height:260px;object-fit:contain;border:1px solid #d6dce4;background:#f6f8fa}
+.sum td,.sum th{text-align:center}@page{size:A4;margin:14mm}@media print{body{margin:0}}`;
+$('#eReport').addEventListener('click', async () => {
+  const list = exportList(), s = $('#eSite').value, t = $('#eTrade').value;
+  if (list.some(i => i.photos?.some(p => p.startsWith('sp:')))) toast('共有フォルダから写真を取得しています…');
+  const full = new Map();
+  await pool(list.flatMap(i => i.photos || []), 4, async p => full.set(p, await fullSrc(p).catch(() => '')));
+  const title = `品質指摘報告書${s ? '　' + s : ''}`;
+  const range = list.length ? `${list[0].date} 〜 ${list[list.length - 1].date}` : '';
+  const c = k => list.filter(i => i.severity === k).length;
+  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${docStyle}</style></head><body>
+<h1>${esc(title)}</h1><p class="sub">指摘日 ${esc(range)}${t ? '／工種：' + esc(t.replace(/^g:/, '')) : ''}／作成日 ${today()}</p>
+<table class="sum" style="margin-bottom:18px"><tr><th>件数</th><th>A 重大</th><th>B 要是正</th><th>C 軽微</th></tr><tr><td>${list.length}</td><td>${c('A')}</td><td>${c('B')}</td><td>${c('C')}</td></tr></table>
+${list.map(i => `<div class="it ${i.severity}"><div class="hd"><span class="no">${fmtNo(i.no)}</span><span class="sev">${i.severity} ${SEV[i.severity]}</span><b>${esc(tradeLabel(i.trade))}・${esc(i.category)}</b></div>
+${i.photos?.length ? `<div class="ph">${i.photos.map(p => full.get(p) ? `<img src="${full.get(p)}">` : '').join('')}</div>` : ''}
+<table><tr><th>現場</th><td>${esc(i.site)}</td><th>指摘日</th><td>${esc(i.date)}${i.createdBy ? '（' + esc(i.createdBy) + '）' : ''}</td></tr><tr><th>部位・場所</th><td colspan="3">${esc(i.location || '―')}</td></tr>
+<tr><th>指摘内容</th><td colspan="3" style="white-space:pre-wrap">${esc(i.comment)}</td></tr>${i.tags?.length ? `<tr><th>タグ</th><td colspan="3">${esc(i.tags.join(' '))}</td></tr>` : ''}</table></div>`).join('')}
+</body></html>`;
+  saveFile(`指摘報告書_${s || '全現場'}_${stamp()}.html`, html, 'text/html');
+});
+$('#eCsv').addEventListener('click', () => {
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['No','指摘日','現場','部位・場所','大分類','工種','分類','重要度','指摘内容','タグ','写真枚数','記録者']]
+    .concat(exportList().map(i => [fmtNo(i.no), i.date, i.site, i.location, groupOf(i.trade), i.trade, i.category, `${i.severity} ${SEV[i.severity]}`, i.comment, (i.tags || []).join(' '), i.photos?.length || 0, i.createdBy || '']));
+  saveFile(`指摘一覧_${$('#eSite').value || '全現場'}_${stamp()}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n'), 'text/csv');
+});
+$('#eCl').addEventListener('click', () => {
+  const t = $('#eClTrade').value, items = checklist.filter(c => tradeMatch(t, c.trade));
+  if (!items.length) { toast('チェック項目がありません'); return; }
+  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>品質チェックリスト</title><style>${docStyle}
+.box{width:16px;height:16px;border:1.5px solid #18212c;display:inline-block}td.c{width:28px;text-align:center}h2{font-size:15px;margin:18px 0 6px}</style></head><body>
+<h1>品質チェックリスト${t ? '　' + esc(t.replace(/^g:/, '')) : ''}</h1><p class="sub">現場名：＿＿＿＿＿＿＿＿＿＿　確認日：＿＿＿＿＿＿　確認者：＿＿＿＿＿＿</p>
+${tradeOrder().filter(tr => items.some(c => c.trade === tr)).map(tr => `<h2>${esc(groupOf(tr))}｜${esc(tr)}</h2><table>${items.filter(c => c.trade === tr).map(c => `<tr><td class="c"><span class="box"></span></td><td>${esc(c.text)}</td><td style="width:30%"></td></tr>`).join('')}</table>`).join('')}
+</body></html>`;
+  saveFile(`チェックリスト_${t.replace(/^g:/, '') || '全工種'}_${stamp()}.html`, html, 'text/html');
+});
+$('#eBackup').addEventListener('click', () => {
+  const data = JSON.stringify({app: 'genba-shiteki', version: 3, exportedAt: new Date().toISOString(), issues: issues.map(strip), checklist: checklist.map(strip), trades, tradesVer: TRADES_VER});
+  saveFile(`現場指摘ノート_バックアップ_${stamp()}.json`, data, 'application/json');
+});
+$('#eImport').addEventListener('change', async e => {
+  const f = e.target.files?.[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.app !== 'genba-shiteki' || !Array.isArray(d.issues)) throw new Error('format');
+    let maxNo = issues.reduce((m, i) => Math.max(m, i.no || 0), 0);
+    for (const i of d.issues) {
+      if (!i.id) continue;
+      const existing = issues.find(x => x.id === i.id);
+      if (!existing && issues.some(x => x.no === i.no)) i.no = ++maxNo; else maxNo = Math.max(maxNo, i.no || 0);
+      issues = issues.filter(x => x.id !== i.id).concat(i);
+      await saveIssue(i);
+    }
+    for (const c of d.checklist || []) { if (!c.id) continue; checklist = checklist.filter(x => x.id !== c.id).concat(c); await saveCheck(c); }
+    if (Array.isArray(d.trades) && d.trades.length && (d.tradesVer || 0) >= TRADES_VER) { trades = d.trades; await saveTrades(); }
+    await migrateRecords();
+    toast(`指摘 ${d.issues.length} 件、チェック項目 ${(d.checklist || []).length} 件${d.trades ? '、工種リスト' : ''}を読み込みました`);
+    renderExport();
+  } catch (err) { toast('このファイルは読み込めません。現場指摘ノートのバックアップ（.json）を選んでください'); }
+  e.target.value = '';
+});
+
+/* ---------- 旧データの移し替え ---------- */
+async function migrateRecords() {
+  for (const i of issues) {
+    const cat = CAT_RENAME[i.category], tr = TRADE_RENAME[i.trade];
+    if (!cat && !tr) continue;
+    if (cat) i.category = cat;
+    if (tr) i.trade = tr;
+    await saveIssue(i);
+  }
+  for (const c of checklist) if (TRADE_RENAME[c.trade]) { c.trade = TRADE_RENAME[c.trade]; await saveCheck(c); }
+}
+
+/* ---------- 工種リストの編集 ---------- */
+const useCount = name => issues.filter(i => i.trade === name).length + checklist.filter(c => c.trade === name).length;
+function renderTradeEditor() {
+  $('#tradeEditor').innerHTML = trades.map((g, gi) => `
+    <div class="tg" data-g="${g.id}">
+      <div class="tg-h"><input type="text" id="tg-${g.id}" value="${esc(g.name)}" data-gname="${g.id}" aria-label="大分類名">
+        <div class="mini"><button data-gmove="-1" ${gi ? '' : 'disabled'} aria-label="上へ">↑</button><button data-gmove="1" ${gi < trades.length - 1 ? '' : 'disabled'} aria-label="下へ">↓</button>
+        <button data-gdel ${g.items.some(i => useCount(i.name)) ? 'disabled title="使用中の工種があります"' : ''}>削除</button></div></div>
+      <ul>${g.items.map((it, ii) => { const n = useCount(it.name); return `
+        <li class="ti ${it.hidden ? 'off' : ''}" data-i="${it.id}">
+          <input type="text" id="ti-${it.id}" value="${esc(it.name)}" data-iname="${it.id}" aria-label="工種名">
+          <div class="mini"><button data-imove="-1" ${ii ? '' : 'disabled'} aria-label="上へ">↑</button><button data-imove="1" ${ii < g.items.length - 1 ? '' : 'disabled'} aria-label="下へ">↓</button>
+          <button data-ihide>${it.hidden ? '表示' : '隠す'}</button><button data-idel ${n ? 'disabled' : ''}>削除</button></div>
+          ${n || it.hidden ? `<span class="use">${n ? `使用中 ${n} 件` : ''}${n && it.hidden ? '・' : ''}${it.hidden ? '入力画面に表示しません' : ''}</span>` : ''}
+        </li>`; }).join('')}</ul>
+      <div class="row"><input type="text" id="tn-${g.id}" data-newitem placeholder="${esc(g.name)}に工種を追加" style="flex:1;min-width:0"><button class="btn small" data-additem>追加</button></div>
+    </div>`).join('');
+}
+const findItem = id => { for (const g of trades) { const i = g.items.findIndex(x => x.id === id); if (i >= 0) return [g, i]; } return []; };
+async function renameTrade(oldName, newName) {
+  for (const i of issues.filter(i => i.trade === oldName)) { i.trade = newName; await saveIssue(i); }
+  for (const c of checklist.filter(c => c.trade === oldName)) { c.trade = newName; await saveCheck(c); }
+  if (F.trade === oldName) F.trade = newName;
+  if (clView === oldName) clView = newName;
+}
+$('#tradeEditor').addEventListener('change', async e => {
+  const el = e.target, v = el.value.trim();
+  if (el.dataset.gname) {
+    const g = trades.find(x => x.id === el.dataset.gname);
+    if (!v || trades.some(x => x !== g && x.name === v)) { toast('同じ名前の大分類があるか、名前が空です'); el.value = g.name; return; }
+    g.name = v; await saveTrades(); toast('大分類の名前を変更しました');
+  } else if (el.dataset.iname) {
+    const [g, idx] = findItem(el.dataset.iname), it = g.items[idx];
+    if (!v || (v !== it.name && masterNames().includes(v))) { toast('同じ名前の工種があるか、名前が空です'); el.value = it.name; return; }
+    const old = it.name; it.name = v;
+    await renameTrade(old, v); await saveTrades();
+    toast(`「${old}」を「${v}」に変更しました`); renderTradeEditor();
+  }
+});
+$('#tradeEditor').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const gEl = b.closest('[data-g]'), g = trades.find(x => x.id === gEl.dataset.g);
+  const li = b.closest('[data-i]'), idx = li ? g.items.findIndex(x => x.id === li.dataset.i) : -1;
+  const move = (arr, i, d) => { const [x] = arr.splice(i, 1); arr.splice(i + d, 0, x); };
+  if (b.dataset.gmove) move(trades, trades.indexOf(g), +b.dataset.gmove);
+  else if (b.dataset.imove) move(g.items, idx, +b.dataset.imove);
+  else if ('ihide' in b.dataset) g.items[idx].hidden = !g.items[idx].hidden;
+  else if ('idel' in b.dataset) { if (!b.classList.contains('armed')) { armDelete(b, '削除?', () => {}); return; } g.items.splice(idx, 1); }
+  else if ('gdel' in b.dataset) { if (!b.classList.contains('armed')) { armDelete(b, '削除?', () => {}); return; } trades.splice(trades.indexOf(g), 1); }
+  else if ('additem' in b.dataset) {
+    const inp = gEl.querySelector('[data-newitem]'), v = inp.value.trim();
+    if (!v) return;
+    if (masterNames().includes(v)) { toast(`「${v}」はすでにあります`); return; }
+    g.items.push({id: uid(), name: v, hidden: false});
+  } else return;
+  await saveTrades(); renderTradeEditor();
+});
+$('#tradeEditor').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.newitem !== undefined) e.target.closest('.row').querySelector('[data-additem]').click(); });
+$('#addGroup').addEventListener('click', async () => {
+  const v = $('#newGroup').value.trim(); if (!v) return;
+  if (trades.some(g => g.name === v)) { toast(`「${v}」はすでにあります`); return; }
+  trades.push({id: uid(), name: v, items: []}); $('#newGroup').value = '';
+  await saveTrades(); renderTradeEditor();
+});
+$('#resetTrades').addEventListener('click', e => armDelete(e.currentTarget, 'もう一度押すと初期値に戻します', async () => {
+  trades = defaultTrades(); await saveTrades(); await persist('meta', {key: 'tradesVer', value: TRADES_VER}); renderTradeEditor();
+  toast('工種リストを初期値に戻しました。リストにない工種の記録は「以前の工種」に入ります');
+}));
+
+/* ---------- 保存先の設定画面 ---------- */
+let modeView = cfg.mode;
+function renderSpPanel() {
+  $$('#modeSel .chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.mode === modeView)));
+  const sp = modeView === 'sharepoint';
+  $('#spNA').hidden = !(sp && !window.msal);
+  $('#spForm').hidden = !(sp && window.msal);
+  if (document.activeElement?.closest?.('#spForm')) return;
+  $('#cfClient').value = cfg.clientId || ''; $('#cfTenant').value = cfg.tenant || ''; $('#cfFolder').value = cfg.folderUrl || '';
+  $('#spActions').hidden = !shared();
+  $('#spConnect').textContent = shared() ? (account ? '設定を保存して再接続' : 'サインインして接続') : '接続する';
+  renderSync();
+}
+$('#modeSel').addEventListener('click', e => {
+  const c = e.target.closest('[data-mode]'); if (!c) return;
+  modeView = c.dataset.mode;
+  if (modeView === 'local' && shared()) {
+    cfg.mode = 'local'; saveCfg(); msalApp = null; account = null;
+    toast('保存先を「この端末だけ」にしました。共有フォルダから受け取った記録は端末に残ります');
+  }
+  renderSpPanel(); renderSync();
+});
+$('#spConnect').addEventListener('click', async () => {
+  const clientId = $('#cfClient').value.trim(), tenant = $('#cfTenant').value.trim(), folderUrl = $('#cfFolder').value.trim();
+  if (!clientId || !tenant || !folderUrl) { toast('アプリケーション ID・テナント ID・フォルダのリンクを入力してください'); return; }
+  const authChanged = clientId !== cfg.clientId || tenant !== cfg.tenant || !shared();
+  if (folderUrl !== cfg.folderUrl) { delete cfg.driveId; delete cfg.folderId; delete cfg.folderName; }
+  Object.assign(cfg, {mode: 'sharepoint', clientId, tenant, folderUrl}); saveCfg();
+  if (authChanged) await initAuth();
+  if (!account) { await signIn(); return; }
+  await finishConnect(); renderSpPanel();
+});
+$('#syncSignIn').addEventListener('click', () => signIn());
+$('#spSync').addEventListener('click', () => { sync.error = ''; runSync(); });
+$('#spOut').addEventListener('click', async () => { if (msalApp && account) await msalApp.logoutRedirect({account, postLogoutRedirectUri: appUrl()}); });
+$('#spUpload').addEventListener('click', async () => {
+  let n = 0;
+  for (const i of issues.filter(i => !i._etag && !i.sample && !i._dirty)) { await saveIssue(i); n++; }
+  for (const c of checklist.filter(c => !c._etag && !c.sample && !c._dirty)) { await saveCheck(c); n++; }
+  toast(n ? `${n} 件を送信します` : '送信が必要な記録はありません（サンプルは送りません）');
+  kick(0);
+});
+$('#spLink').addEventListener('click', () => {
+  const d = {clientId: cfg.clientId, tenant: cfg.tenant, folderUrl: cfg.folderUrl, driveId: cfg.driveId, folderId: cfg.folderId, folderName: cfg.folderName};
+  $('#spLinkText').value = appUrl() + '#cfg=' + encodeURIComponent(JSON.stringify(d));
+  $('#spLinkBox').hidden = false;
+});
+$('#spCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('#spLinkText').value); toast('リンクをコピーしました'); }
+  catch (e) { $('#spLinkText').select(); toast('リンクを選択しました。コピーしてください'); }
+});
+window.addEventListener('online', () => kick(0));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') kick(0); });
+setInterval(() => { if (document.visibilityState === 'visible') kick(0); }, 120000);
+
+/* ---------- サンプル ---------- */
+function samplePhoto(kind, label) {
+  const c = document.createElement('canvas'); c.width = 640; c.height = 480; const g = c.getContext('2d');
+  const P = {
+    wall: ['#e9e6df', '#d9d5cc'], siding: ['#8c9196', '#7b8085'], floor: ['#b88a5a', '#a5784b'],
+    insul: ['#e9d77a', '#d8c463'], conc: ['#a7a9a6', '#959893'], steel: ['#b9bec4', '#a9aeb4'], door: ['#d9dde2', '#c3c9d0'],
+  }[kind];
+  g.fillStyle = P[0]; g.fillRect(0, 0, 640, 480);
+  g.fillStyle = P[1];
+  if (kind === 'siding') for (let y = 0; y < 480; y += 60) g.fillRect(0, y, 640, 6);
+  if (kind === 'floor') for (let x = 0; x < 640; x += 90) g.fillRect(x, 0, 3, 480);
+  if (kind === 'wall') { g.fillRect(318, 0, 4, 480); g.fillStyle = '#f4f2ee'; g.fillRect(0, 420, 640, 60); }
+  if (kind === 'insul') for (let x = 0; x < 640; x += 210) g.fillRect(x, 0, 40, 480);
+  if (kind === 'conc') { g.fillStyle = '#6e6f6c'; g.fillRect(270, 140, 26, 220); g.fillRect(256, 132, 54, 16); }
+  if (kind === 'steel') { g.fillStyle = '#5a6068'; g.fillRect(0, 200, 640, 90); g.fillRect(250, 0, 90, 480); g.fillStyle = '#c9ccd0'; for (let y = 215; y < 290; y += 30) for (let x = 360; x < 460; x += 30) { g.beginPath(); g.arc(x, y, 8, 0, Math.PI * 2); g.fill(); } }
+  if (kind === 'door') { g.fillStyle = '#8f98a3'; g.fillRect(120, 0, 22, 480); g.fillRect(120, 440, 400, 22); }
+  g.strokeStyle = '#e5262b'; g.lineWidth = 7; g.beginPath(); g.ellipse(320, 250, 120, 80, -0.15, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = 'rgba(20,28,40,.72)'; g.fillRect(0, 440, 640, 40);
+  g.fillStyle = '#fff'; g.font = '700 18px sans-serif'; g.fillText('サンプル写真　' + label, 14, 467);
+  return c.toDataURL('image/jpeg', 0.7);
+}
+async function seed() {
+  const S1 = 'A物流センター新築工事', S2 = 'B社 事務所棟新築工事';
+  const rows = [
+    [S1, '2026-09-08', '外部 北面 X3-X4通り', 'ALC', '施工不良', 'A', 'ALC版目地のシーリング打ち残し（L≈500mm）。雨水浸入のおそれあり。打ち増しを依頼。', ['雨仕舞'], 'siding'],
+    [S1, '2026-09-22', '2F 柱梁接合部 X2-Y3', '鉄骨', '施工不良', 'B', '高力ボルト1本に本締め後のマーキングなし。締付け確認を依頼。', ['ボルト'], 'steel'],
+    [S1, '2026-10-06', '2F 梁 Y2通り', '断熱・耐火被覆', '施工不良', 'A', '吹付けロックウールの厚さ不足。確認ピンで25mm（規定35mm）。増し吹きを依頼。', ['耐火'], 'insul'],
+    [S1, '2026-10-06', '1F 倉庫 土間', 'コンクリート', 'キズ・汚損', 'C', '土間コンクリートに長さ約300mmのヘアクラック。経過観察とし、引渡し前に再確認。', [], 'conc'],
+    [S2, '2026-09-15', '基礎梁 X1-Y1', '鉄筋・型枠', '寸法・仕様違い', 'B', '基礎梁主筋のかぶり厚さ不足（実測35mm／規定40mm）。スペーサーの追加を指示。', ['配筋検査'], 'conc'],
+    [S2, '2026-10-01', '屋上 ルーフドレン廻り', '防水', '未施工・欠落', 'A', 'ルーフドレン廻りの防水シート端部の押え金物が未設置。取付けを依頼。', ['雨仕舞'], 'door'],
+    [S2, '2026-10-09', '外部 南面', 'サンドイッチパネル', '施工不良', 'B', 'サンドイッチパネル目地のシーリング端部に剥離あり。プライマー塗布不足の疑い。', ['雨仕舞'], 'siding'],
+    [S2, '2026-10-14', '2F 事務室 天井', '壁・天井', '施工不良', 'C', '天井ボード継ぎ目に約1mmの段差。パテ処理の追加を依頼。', [], 'wall'],
+  ];
+  const now = new Date().toISOString();
+  for (const [n, r] of rows.entries()) {
+    const rec = {id: uid(), no: n + 1, site: r[0], date: r[1], location: r[2], trade: r[3], category: r[4], severity: r[5], comment: r[6], tags: r[7], photos: [samplePhoto(r[8], r[3] + '・' + r[2])], createdAt: now, updatedAt: now, sample: true};
+    rec.thumbs = [await makeThumb(rec.photos[0])];
+    await persist('issues', rec); issues.push(rec);
+  }
+  const cl = [
+    ['ALC', '外壁目地のシーリング打ち残しがないか、全周を目視で確認する', [issues[0].id, issues[6].id]],
+    ['サンドイッチパネル', 'シーリング施工前にプライマー塗布の有無を確認する', [issues[6].id]],
+    ['断熱・耐火被覆', '耐火被覆の厚さを確認ピンで測る（柱・梁とも）', [issues[2].id]],
+  ];
+  for (const [t, txt, src] of cl) { const it = await addCheck(t, txt, src); it.sample = true; await persist('checklist', it); }
+  await persist('meta', {key: 'seeded', value: true});
+}
+
+/* ---------- 起動 ---------- */
+(async () => {
+  readCfgLink();
+  await store.open();
+  try {
+    issues = await store.all('issues');
+    checklist = await store.all('checklist');
+    lastSite = (await store.get('meta', 'lastSite'))?.value || '';
+    checks = (await store.get('meta', 'checks'))?.value || {};
+    outbox = (await store.get('meta', 'outbox'))?.value || [];
+    const ts = (await store.get('meta', 'tradesSync'))?.value || {};
+    tradesDirty = !!ts.dirty; tradesEtag = ts.etag || '';
+    /* 以前の版はチェック状態を項目に持っていた。端末ごとの記録に移す */
+    for (const c of checklist.filter(c => 'checked' in c)) { if (c.checked) checks[c.id] = true; delete c.checked; await persist('checklist', c); }
+    await persist('meta', {key: 'checks', value: checks});
+    trades = (await store.get('meta', 'trades'))?.value || [];
+    const seeded = (await store.get('meta', 'seeded'))?.value;
+    await persist('meta', {key: 'probe', value: Date.now()});
+    const ver = (await store.get('meta', 'tradesVer'))?.value || 0;
+    if (!trades.length || ver < TRADES_VER) { trades = defaultTrades(); await persist('meta', {key: 'trades', value: trades}); await persist('meta', {key: 'tradesVer', value: TRADES_VER}); }
+    await migrateRecords();
+    if (!seeded && !issues.length && !shared()) await seed();
+  } catch (e) { toast('保存データを読み込めませんでした'); }
+  if (!trades.length) trades = defaultTrades();
+  try { navigator.storage?.persist?.(); } catch (e) {}
+  renderList();
+  downloads();
+  if (shared()) { await initAuth(); renderSync(); if (account) finishConnect(); }
+})();
+})();
+</script>
