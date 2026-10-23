@@ -347,8 +347,12 @@ dl.kv dd{margin:0;overflow-wrap:anywhere}
       </div>
       <p class="hint" id="spNA" hidden style="margin-top:10px">共有フォルダはこの画面（claude.ai 上の試作版）では使えません。社内向けに公開した版で使えます。</p>
       <div id="spForm" hidden style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
-        <div class="field"><label for="cfClient">アプリケーション（クライアント）ID</label><input type="text" id="cfClient" autocomplete="off" placeholder="例：1a2b3c4d-…"></div>
-        <div class="field"><label for="cfTenant">ディレクトリ（テナント）ID</label><input type="text" id="cfTenant" autocomplete="off" placeholder="例：9z8y7x6w-…"></div>
+        <details class="field" id="cfIds"><summary class="hint" style="cursor:pointer">Microsoft 365 のアプリ登録（通常は変更不要）</summary>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:10px">
+            <div class="field"><label for="cfClient">アプリケーション（クライアント）ID</label><input type="text" id="cfClient" autocomplete="off" placeholder="例：1a2b3c4d-…"></div>
+            <div class="field"><label for="cfTenant">ディレクトリ（テナント）ID</label><input type="text" id="cfTenant" autocomplete="off" placeholder="例：9z8y7x6w-…"></div>
+          </div>
+        </details>
         <div class="field"><label for="cfFolder">共有フォルダのリンク</label><input type="text" id="cfFolder" autocomplete="off" placeholder="https://〇〇.sharepoint.com/:f:/s/…">
           <span class="hint">SharePoint または Teams の「ファイル」で、保存用フォルダの「…」→「リンクをコピー」で取得したリンクを貼り付けます。</span></div>
         <div class="row"><button class="btn primary" id="spConnect">接続する</button></div>
@@ -596,7 +600,9 @@ applyLayout();
 
 const CFG_KEY = 'genba-shiteki-config';
 const SCOPES = ['Files.ReadWrite.All'];
-let cfg = {mode: 'local'};
+/* 社内（フクダ・アンド・パートナーズ）の Microsoft 365 に登録したアプリ。別の登録を使うときは設定画面で変えられる */
+const DEFAULT_AUTH = {clientId: 'b4f6bb91-24e0-47d4-94b6-91bbfe89e93b', tenant: '25469404-f8ca-4624-a725-dc172cde6ac7'};
+let cfg = {mode: 'local', ...DEFAULT_AUTH};
 try { cfg = {...cfg, ...JSON.parse(localStorage.getItem(CFG_KEY) || '{}')}; } catch (e) {}
 const saveCfg = () => { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) {} };
 const shared = () => cfg.mode === 'sharepoint';
@@ -1393,7 +1399,8 @@ $('#modeSel').addEventListener('click', e => {
 });
 $('#spConnect').addEventListener('click', async () => {
   const clientId = $('#cfClient').value.trim(), tenant = $('#cfTenant').value.trim(), folderUrl = $('#cfFolder').value.trim();
-  if (!clientId || !tenant || !folderUrl) { toast('アプリケーション ID・テナント ID・フォルダのリンクを入力してください'); return; }
+  if (!folderUrl) { toast('共有フォルダのリンクを貼り付けてください'); return; }
+  if (!clientId || !tenant) { $('#cfIds').open = true; toast('アプリケーション ID とテナント ID を入力してください'); return; }
   const authChanged = clientId !== cfg.clientId || tenant !== cfg.tenant || !shared();
   if (folderUrl !== cfg.folderUrl) { delete cfg.driveId; delete cfg.folderId; delete cfg.folderName; }
   Object.assign(cfg, {mode: 'sharepoint', clientId, tenant, folderUrl}); saveCfg();
